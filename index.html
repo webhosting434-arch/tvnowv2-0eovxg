@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TV Now - Live Streaming</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0a0e27;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: 
+        radial-gradient(ellipse at top, rgba(30, 58, 138, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at bottom right, rgba(88, 28, 135, 0.1) 0%, transparent 50%),
+        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255, 255, 255, 0.03) 2px, rgba(255, 255, 255, 0.03) 4px);
+      pointer-events: none;
+      z-index: -2;
+    }
+
+    .bg-orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.4;
+      z-index: -1;
+      animation: float 20s infinite ease-in-out;
+    }
+    .orb-1 { width: 400px; height: 400px; background: linear-gradient(135deg, #1e3a8a, #3b82f6); top: -100px; right: -100px; animation-delay: 0s; }
+    .orb-2 { width: 300px; height: 300px; background: linear-gradient(135deg, #581c87, #8b5cf6); bottom: -50px; left: -50px; animation-delay: -5s; }
+    .orb-3 { width: 250px; height: 250px; background: linear-gradient(135deg, #0f766e, #14b8a6); top: 50%; left: 50%; animation-delay: -10s; }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(30px, -30px) scale(1.1); }
+      66% { transform: translate(-20px, 20px) scale(0.9); }
+    }
+
+    .header {
+      text-align: center;
+      padding: 20px 0;
+      width: 100%;
+      max-width: 100%;
+      position: relative;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .logo {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #34d399 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 5px;
+      letter-spacing: -1px;
+      text-shadow: 0 0 40px rgba(96, 165, 250, 0.3);
+    }
+
+    .subtitle {
+      color: #94a3b8;
+      font-size: 1rem;
+      font-weight: 400;
+      letter-spacing: 0.5px;
+    }
+
+    .player-container {
+      width: 100%;
+      max-width: 100%;
+      background: rgba(15, 23, 42, 0.8);
+      padding: 20px;
+      margin-bottom: 0;
+    }
+
+    .video-wrapper {
+      position: relative;
+      width: 100%;
+      height: 0;
+      padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+      overflow: hidden;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .video-wrapper iframe {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      border: none;
+      border-radius: 12px;
+      background: #000;
+    }
+
+    .placeholder-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      z-index: 10;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .placeholder-screen.hidden {
+      display: none;
+    }
+
+    .placeholder-icon {
+      font-size: 4rem;
+      margin-bottom: 15px;
+      opacity: 0.5;
+    }
+
+    .placeholder-text {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 8px;
+    }
+
+    .placeholder-subtext {
+      font-size: 0.9rem;
+      color: #64748b;
+    }
+
+    .channel-info {
+      text-align: center;
+      padding: 20px;
+      background: rgba(15, 23, 42, 0.6);
+    }
+
+    .channel-name {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 15px;
+      color: #f1f5f9;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .channel-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #dc2626, #ef4444);
+      padding: 8px 24px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+    }
+
+    .live-dot {
+      width: 10px; height: 10px;
+      background: #fff;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    .channels-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 15px;
+      width: 100%;
+      padding: 20px;
+      background: rgba(15, 23, 42, 0.4);
+    }
+
+    .channel-btn {
+      background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
+      color: #e2e8f0;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      padding: 20px 15px;
+      border-radius: 14px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .channel-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .channel-btn:hover::before { opacity: 1; }
+    .channel-btn:hover {
+      transform: translateY(-3px);
+      border-color: rgba(96, 165, 250, 0.4);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(96, 165, 250, 0.2);
+    }
+
+    .channel-btn.active {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+      color: #fff;
+    }
+
+    .channel-btn:active { transform: translateY(0); }
+
+    .channel-icon {
+      width: 50px; height: 50px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 1.4rem;
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    }
+
+    .ad-section {
+      width: 100%;
+      padding: 25px 20px;
+      background: rgba(15, 23, 42, 0.6);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ad-title {
+      color: #64748b;
+      font-size: 0.8rem;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-align: center;
+    }
+
+    .ad-container {
+      width: 100%;
+      max-width: 728px;
+      min-height: 90px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .ad-container iframe {
+      max-width: 100%;
+      border: none;
+    }
+
+    .developer-section {
+      width: 100%;
+      padding: 15px 20px;
+      background: rgba(15, 23, 42, 0.8);
+      border-top: 1px solid rgba(148, 163, 184, 0.1);
+      text-align: center;
+    }
+
+    .developer-name {
+      color: #94a3b8;
+      font-size: 0.9rem;
+      font-weight: 500;
+      letter-spacing: 1px;
+    }
+
+    .developer-name span {
+      color: #60a5fa;
+      font-weight: 600;
+    }
+
+    .footer {
+      text-align: center;
+      color: #64748b;
+      font-size: 0.85rem;
+      padding: 20px;
+      background: rgba(15, 23, 42, 0.9);
+      border-top: 1px solid rgba(148, 163, 184, 0.1);
+      width: 100%;
+    }
+
+    .loading {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      color: #94a3b8;
+      font-size: 1rem;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      z-index: 20;
+      background: rgba(2, 6, 23, 0.95);
+      padding: 15px 25px;
+      border-radius: 12px;
+    }
+
+    .loading-spinner {
+      width: 24px; height: 24px;
+      border: 3px solid rgba(148, 163, 184, 0.3);
+      border-top-color: #60a5fa;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .video-wrapper.loading .loading { display: flex; }
+
+    @media (max-width: 768px) {
+      .logo { font-size: 2rem; }
+      .subtitle { font-size: 0.9rem; }
+      .video-wrapper { padding-bottom: 56.25%; }
+      .channels-grid { 
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); 
+        gap: 12px;
+        padding: 15px;
+      }
+      .channel-btn { padding: 18px 12px; font-size: 0.9rem; }
+      .channel-icon { width: 45px; height: 45px; font-size: 1.2rem; }
+      .player-container { padding: 15px; }
+      .channel-name { font-size: 1.4rem; }
+      .ad-container { max-width: 100%; min-height: 250px; }
+      .placeholder-icon { font-size: 3rem; }
+      .placeholder-text { font-size: 1.1rem; }
+    }
+
+    @media (max-width: 480px) {
+      .channels-grid { grid-template-columns: repeat(2, 1fr); }
+      .logo { font-size: 1.8rem; }
+      .channel-name { font-size: 1.3rem; }
+      .video-wrapper { padding-bottom: 56.25%; }
+      .ad-container { min-height: 250px; padding: 10px; }
+      .channel-info { padding: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-orb orb-3"></div>
+
+  <div class="header">
+    <div class="logo"> TV NOW</div>
+    <div class="subtitle">Platform Streaming TV Nasional Terpercaya</div>
+  </div>
+
+  <div class="player-container">
+    <div class="video-wrapper" id="videoWrapper">
+      <!-- Placeholder Screen -->
+      <div class="placeholder-screen" id="placeholderScreen">
+        <div class="placeholder-icon"></div>
+        <div class="placeholder-text">PILIH CHANNEL</div>
+        <div class="placeholder-subtext">Klik tombol channel di bawah untuk mulai menonton</div>
+      </div>
+      
+      <iframe id="tvPlayer" src="" allowfullscreen allow="autoplay; encrypted-media" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+      <div class="loading" id="loadingText">
+        <div class="loading-spinner"></div>
+        <span>Memuat siaran...</span>
+      </div>
+    </div>
+    
+    <div class="channel-info">
+      <div class="channel-name" id="currentChannel">Pilih Channel</div>
+      <div>
+        <span class="channel-badge" id="channelBadge">
+          <span class="live-dot"></span>
+          <span>LIVE STREAMING</span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="channels-grid">
+    <button class="channel-btn" data-channel="RCTI" data-url="https://sindikasi.inews.id/embed/video/YWdlbnQ9ZGVza3RvcCZ1cmw9aHR0cHMlM0ElMkYlMkZlbWJlZC5yY3RpcGx1cy5jb20lMkZsaXZlJTJGcmN0aSUyRmluZXdzaWQmaGVpZ2h0PTEwMCUyNSZ3aWR0aD0xMDAlMjU=">
+      <div class="channel-icon" style="background: linear-gradient(135deg, #dc2626, #b91c1c); color: #fff;">R</div>
+      RCTI
+    </button>
+    <button class="channel-btn" data-channel="GTV" data-url="https://sindikasi.inews.id/embed/video/YWdlbnQ9ZGVza3RvcCZ1cmw9aHR0cHMlM0ElMkYlMkZlbWJlZC5yY3RpcGx1cy5jb20lMkZsaXZlJTJGZ3R2JTJGaW5ld3NpZCZoZWlnaHQ9MTAwJTI1JndpZHRoPTEwMCUyNQ==">
+      <div class="channel-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff;">G</div>
+      GTV
+    </button>
+    <button class="channel-btn" data-channel="MNCTV" data-url="https://sindikasi.inews.id/embed/video/YWdlbnQ9ZGVza3RvcCZ1cmw9aHR0cHMlM0ElMkYlMkZlbWJlZC5yY3RpcGx1cy5jb20lMkZsaXZlJTJGbW5jdHYlMkZpbmV3c2lkJmhlaWdodD0xMDAlMjUmd2lkdGg9MTAwJTI1">
+      <div class="channel-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: #fff;">M</div>
+      MNCTV
+    </button>
+    <button class="channel-btn" data-channel="TRANSTV HD" data-url="https://20.detik.com/watch/livestreaming-transtv">
+      <div class="channel-icon" style="background: linear-gradient(135deg, #0ea5e9, #0284c7); color: #fff;">T</div>
+      TRANSTV HD
+    </button>
+    <button class="channel-btn" data-channel="TRANS 7" data-url="https://20.detik.com/watch/livestreaming-trans7">
+      <div class="channel-icon" style="background: linear-gradient(135deg, #10b981, #059669); color: #fff;">7</div>
+      TRANS 7
+    </button>
+    <button class="channel-btn" data-channel="inews" data-url="https://sindikasi.inews.id/embed/video/YWdlbnQ9ZGVza3RvcCZ1cmw9aHR0cHMlM0ElMkYlMkZlbWJlZC5yY3RpcGx1cy5jb20lMkZsaXZlJTJGaW5ld3MlMkZpbmV3c2lkJmhlaWdodD0xMDAlMjUmd2lkdGg9MTAwJTI1">
+      <div class="channel-icon" style="background: linear-gradient(135deg, #f97316, #ea580c); color: #fff;">I</div>
+      inews
+    </button>
+    <button class="channel-btn" data-channel="CNN INDONESIA" data-url="https://www.cnnindonesia.com/tv/embed?ref=transmedia">
+      <div class="channel-icon" style="background: linear-gradient(135deg, #dc2626, #b91c1c); color: #fff;">C</div>
+      CNN INDONESIA
+    </button>
+    <!--  RTV - Rajawali Televisi -->
+    <button class="channel-btn" data-channel="RTV" data-url="https://www.rtv.co.id/livertv.php" data-embed="true">
+      <div class="channel-icon" style="background: linear-gradient(135deg, #06b6d4, #0891b2); color: #fff;"></div>
+      RTV
+    </button>
+  </div>
+
+  <!-- Advertisement Section -->
+  <div class="ad-section">
+    <div class="ad-title">SPONSORED ADVERTISEMENT</div>
+    <div class="ad-container">
+      <script>
+        atOptions = {
+          'key' : 'a6878515b32d84d321637431918f8804',
+          'format' : 'iframe',
+          'height' : 250,
+          'width' : 300,
+          'params' : {}
+        };
+      </script>
+      <script src="https://www.highperformanceformat.com/a6878515b32d84d321637431918f8804/invoke.js"></script>
+    </div>
+  </div>
+
+  <!-- Developer Section -->
+  <div class="developer-section">
+    <div class="developer-name">Developed by <span>im.pz official</span></div>
+  </div>
+
+  <div class="footer">
+    &copy; 2026 TV Now. All rights reserved. | Platform Streaming Resmi & Terpercaya
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const player = document.getElementById('tvPlayer');
+      const videoWrapper = document.getElementById('videoWrapper');
+      const placeholderScreen = document.getElementById('placeholderScreen');
+      const currentChannel = document.getElementById('currentChannel');
+      const channelBadge = document.getElementById('channelBadge');
+      const loadingText = document.getElementById('loadingText');
+      const buttons = document.querySelectorAll('.channel-btn');
+
+      // Auto-load first channel (RCTI) saat halaman dibuka
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          buttons[0].click(); // Auto-click RCTI
+        }, 500);
+      });
+
+      buttons.forEach(btn => {
+        btn.addEventListener('click', function() {
+          const channel = this.dataset.channel;
+          const url = this.dataset.url;
+          const isEmbed = this.dataset.embed === 'true';
+          
+          // Update active button
+          buttons.forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          
+          // Hide placeholder and show loading
+          if (placeholderScreen) {
+            placeholderScreen.classList.add('hidden');
+          }
+          
+          loadChannel(channel, url, isEmbed);
+        });
+      });
+
+      function loadChannel(name, url, isEmbed) {
+        videoWrapper.classList.add('loading');
+        currentChannel.textContent = name;
+        channelBadge.innerHTML = '<span class="live-dot"></span><span>LIVE • ' + name + '</span>';
+        
+        setTimeout(() => {
+          if (isEmbed && name === 'RTV') {
+            // RTV menggunakan iframe embed khusus
+            const rtvIframe = document.createElement('iframe');
+            rtvIframe.id = 'tvPlayer';
+            rtvIframe.style.cssText = 'border:1px #FFFFFF none; border-radius: 12px;';
+            rtvIframe.src = 'https://www.rtv.co.id/livertv.php';
+            rtvIframe.title = 'rtv';
+            rtvIframe.width = '100%';
+            rtvIframe.height = '100%';
+            rtvIframe.scrolling = 'yes';
+            rtvIframe.frameBorder = '0';
+            rtvIframe.allowFullscreen = true;
+            rtvIframe.allow = 'autoplay; encrypted-media';
+            
+            // Ganti iframe lama dengan yang baru
+            const oldPlayer = document.getElementById('tvPlayer');
+            if (oldPlayer && oldPlayer.parentNode) {
+              oldPlayer.parentNode.replaceChild(rtvIframe, oldPlayer);
+            }
+            
+            // Update reference
+            const newPlayer = document.getElementById('tvPlayer');
+            newPlayer.onload = function() {
+              videoWrapper.classList.remove('loading');
+            };
+          } else {
+            // Channel lain menggunakan iframe standar
+            player.src = url;
+            player.onload = function() {
+              videoWrapper.classList.remove('loading');
+            };
+            player.onerror = function() {
+              videoWrapper.classList.remove('loading');
+              showError('Gagal memuat ' + name);
+            };
+          }
+          
+          // Fallback timeout
+          setTimeout(function() {
+            videoWrapper.classList.remove('loading');
+          }, 4000);
+        }, 200);
+      }
+
+      function showError(msg) {
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = `
+          position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+          background:rgba(220,38,38,0.95);color:#fff;padding:20px 30px;
+          border-radius:12px;font-size:1rem;z-index:30;
+          box-shadow:0 10px 30px rgba(0,0,0,0.5);
+        `;
+        errorDiv.textContent = msg;
+        videoWrapper.appendChild(errorDiv);
+        setTimeout(() => errorDiv.remove(), 4000);
+      }
+
+      // Keyboard shortcut: 1-8
+      document.addEventListener('keydown', function(e) {
+        const channelMap = {
+          '1': 'RCTI', '2': 'GTV', '3': 'MNCTV', '4': 'TRANSTV HD',
+          '5': 'TRANS 7', '6': 'inews', '7': 'CNN INDONESIA', '8': 'RTV'
+        };
+        if (channelMap[e.key]) {
+          const targetBtn = [...buttons].find(btn => btn.dataset.channel === channelMap[e.key]);
+          if (targetBtn) targetBtn.click();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
+
+<div class="developer-section">
+  <div class="developer-name">Developed by <span>im.pz official</span></div>
+</div>
+
